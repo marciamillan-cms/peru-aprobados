@@ -4,22 +4,19 @@ app.py
 Streamlit UI and navigation for the Eventtia participant-approval tool.
 All Eventtia communication lives in eventtia_client.py; this file only
 renders the interface and wires up button clicks to that client.
+
+Access control is handled entirely by Streamlit Community Cloud's per-app
+viewer allow-list (Share -> "Who can view this app" -> restrict by email),
+not by any code here -- see README.md for setup.
 """
 import streamlit as st
 
-import auth
 import config
 import utils
 from eventtia_client import ConflictError, EventtiaAPIError, EventtiaClient, IntegrityError, Participant
 
 st.set_page_config(page_title="Participant Validation", page_icon="✅", layout="wide")
 utils.inject_theme(st)
-
-# ---------------------------------------------------------------------------
-# Auth gate
-# ---------------------------------------------------------------------------
-if not auth.login_form():
-    st.stop()
 
 # ---------------------------------------------------------------------------
 # Config gate -- fail loudly and helpfully rather than crashing later
@@ -61,10 +58,9 @@ client = get_client()
 header_col1, header_col2 = st.columns([6, 1])
 with header_col1:
     st.markdown(
-        f"""
+        """
         <div class="brand-bar">
             <h1><span class="brand-mark"></span>Participant Validation</h1>
-            <span class="user-pill">Signed in as {auth.current_user()}</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -74,10 +70,6 @@ top_l, top_r = st.columns([1, 5])
 with top_l:
     if st.button("↻ Refresh participants", use_container_width=True):
         refresh_data()
-        st.rerun()
-with top_r:
-    if st.button("Log out"):
-        auth.logout()
         st.rerun()
 
 # ---------------------------------------------------------------------------
