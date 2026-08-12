@@ -186,29 +186,43 @@ html, body, [class*="css"] {
 .badge-rejected { color: var(--danger); background: var(--danger-bg); }
 
 /* ---- Tabs ---- */
-.stTabs [data-baseweb="tab-list"] { gap: 0.5rem; border-bottom: 1px solid var(--border); }
+.stTabs [data-baseweb="tab-list"] { gap: 0.5rem; border-bottom: none; }
+.stTabs [data-baseweb="tab-highlight"] { background-color: transparent !important; }
+.stTabs [data-baseweb="tab-border"] { display: none !important; }
+[role="tablist"]::after { display: none !important; }
 .stTabs [data-baseweb="tab"] {
     color: var(--text-muted);
     font-weight: 600;
     padding: 0.6rem 1rem;
+    border-bottom: 2px solid transparent;
 }
 .stTabs [aria-selected="true"] {
     color: var(--text) !important;
-    border-bottom: 2px solid var(--accent-1);
+    border-bottom: 2px solid var(--accent-1) !important;
 }
 
 /* ---- Buttons -- fully rounded pills, matching the site's CTAs ---- */
 .stButton > button {
     border-radius: 999px;
     border: 1px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text);
     font-weight: 600;
     padding: 0.5rem 1.3rem;
+}
+.stButton > button:hover {
+    border-color: var(--accent-1);
+    color: var(--accent-1);
 }
 .stButton > button[kind="primary"] {
     background: var(--accent-gradient);
     border: none;
     color: #fff;
     font-weight: 700;
+}
+.stButton > button[kind="primary"]:hover {
+    color: #fff;
+    opacity: 0.9;
 }
 div[data-testid="stForm"] .stButton > button {
     background: var(--accent-gradient);
