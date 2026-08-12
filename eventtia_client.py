@@ -173,7 +173,14 @@ class EventtiaClient:
     def _v3_request(self, method: str, path: str, params: dict = None, json_body: dict = None) -> Any:
         self._ensure_v3_token()
         url = f"{self.v3_base_url}{path}"
-        headers = {"Authorization": f"Bearer {self._v3_token}"}
+        # Explicitly ask any cache sitting in front of Eventtia's API (CDN,
+        # reverse proxy, etc.) not to serve a stale response -- our own
+        # app-level cache is already cleared by the time we get here, but
+        # that only controls OUR cache, not anything upstream. This was
+        # added after observing that a fresh GET right after creating a
+        # new attendee could still miss it until the app was rebooted,
+        # which pointed at something outside our own caching entirely.
+        headers = {"Authorization": f"Bearer {self._v3_token}", "Cache-Control": "no-cache, no-store", "Pragma": "no-cache"}
         try:
             resp = requests.request(method, url, headers=headers, params=params, json=json_body, timeout=self.timeout)
         except requests.RequestException as exc:
@@ -182,7 +189,7 @@ class EventtiaClient:
         if resp.status_code == 401:
             self._v3_token = None
             self._ensure_v3_token()
-            headers = {"Authorization": f"Bearer {self._v3_token}"}
+            headers = {"Authorization": f"Bearer {self._v3_token}", "Cache-Control": "no-cache, no-store", "Pragma": "no-cache"}
             try:
                 resp = requests.request(method, url, headers=headers, params=params, json=json_body, timeout=self.timeout)
             except requests.RequestException as exc:
@@ -329,7 +336,17 @@ class EventtiaClient:
             data = self._v3_request(
                 "GET",
                 f"/events/{self.event_uri}/attendees",
-                params={"page[size]": config.PAGE_SIZE, "page[number]": page_number},
+                params={
+                    "page[size]": config.PAGE_SIZE,
+                    "page[number]": page_number,
+                    # Cache-busting: some caching layer in front of
+                    # Eventtia's API (CDN, reverse proxy) has been
+                    # observed to serve a stale attendee list for a
+                    # while after a new registration, regardless of
+                    # no-cache headers. A unique query param defeats any
+                    # cache that keys purely on the URL.
+                    "_": str(time.time()),
+                },
             )
             for attendee in (data or {}).get("data", []) or []:
                 participants.append(self._normalize(attendee, field_defs, type_names))
@@ -346,7 +363,11 @@ class EventtiaClient:
     def get_participant(self, participant_id: str) -> Participant:
         field_defs = self.get_field_definitions()
         type_names = self.get_attendee_type_names()
-        data = self._v3_request("GET", f"/events/{self.event_uri}/attendees/{participant_id}")
+        data = self._v3_request(
+            "GET",
+            f"/events/{self.event_uri}/attendees/{participant_id}",
+            params={"_": str(time.time())},  # cache-busting, see get_participants() for why
+        )
         attendee = (data or {}).get("data")
         if not attendee:
             raise EventtiaAPIError(f"Participant {participant_id} was not found in Eventtia.")
