@@ -88,6 +88,18 @@ except EventtiaAPIError as exc:
     st.error(f"No se pudieron cargar los participantes desde Eventtia: {exc}")
     st.stop()
 
+if config.TICKET_TYPE_FILTER:
+    available_type_names = sorted(set(client.get_attendee_type_names().values()) - {""})
+    normalized_target = EventtiaClient._normalize_ticket_name(config.TICKET_TYPE_FILTER)
+    normalized_available = {EventtiaClient._normalize_ticket_name(n) for n in available_type_names}
+    if normalized_target not in normalized_available:
+        st.warning(
+            f"No se encontró ningún tipo de entrada llamado \"{config.TICKET_TYPE_FILTER}\" en este evento "
+            "-- la lista de participantes puede estar vacía por este motivo. "
+            f"Tipos de entrada disponibles: {', '.join(available_type_names) if available_type_names else '(ninguno encontrado)'}. "
+            "Revisá EVENTTIA_TICKET_TYPE_FILTER en la configuración."
+        )
+
 buckets = utils.split_by_status(participants)
 pending = buckets[config.STATUS_PENDING]
 approved = buckets[config.STATUS_APPROVED]
