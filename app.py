@@ -15,18 +15,18 @@ import config
 import utils
 from eventtia_client import ConflictError, EventtiaAPIError, EventtiaClient, IntegrityError, Participant
 
-st.set_page_config(page_title="Participant Validation", page_icon="✅", layout="wide")
+st.set_page_config(page_title="Validación de Participantes", page_icon="✅", layout="wide")
 utils.inject_theme(st)
 
 # ---------------------------------------------------------------------------
 # Config gate -- fail loudly and helpfully rather than crashing later
 # ---------------------------------------------------------------------------
 if not config.is_configured():
-    st.markdown('<div class="brand-bar"><h1><span class="brand-mark"></span>Participant Validation</h1></div>', unsafe_allow_html=True)
-    st.warning("This app isn't fully configured yet. Add the following to Streamlit Secrets:")
+    utils.render_brand_bar(st, "Validación de Participantes", config.COMPANY_LOGO_PATH, config.EVENT_LOGO_PATH)
+    st.warning("La aplicación aún no está completamente configurada. Agregá lo siguiente en Streamlit Secrets:")
     for item in config.missing_settings():
         st.markdown(f"- `{item}`")
-    st.caption("See .streamlit/secrets.toml.example in the repo for the expected format.")
+    st.caption("Ver .streamlit/secrets.toml.example en el repositorio para el formato esperado.")
     st.stop()
 
 
@@ -40,7 +40,7 @@ def _cache_key():
     return st.session_state.get("_refresh_token", 0)
 
 
-@st.cache_data(ttl=config.CACHE_TTL_SECONDS, show_spinner="Loading participants from Eventtia...")
+@st.cache_data(ttl=config.CACHE_TTL_SECONDS, show_spinner="Cargando participantes desde Eventtia...")
 def load_participants(_client: EventtiaClient, _cache_bust: int) -> list[Participant]:
     return _client.get_participants()
 
@@ -55,20 +55,11 @@ client = get_client()
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-header_col1, header_col2 = st.columns([6, 1])
-with header_col1:
-    st.markdown(
-        """
-        <div class="brand-bar">
-            <h1><span class="brand-mark"></span>Participant Validation</h1>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+utils.render_brand_bar(st, "Validación de Participantes", config.COMPANY_LOGO_PATH, config.EVENT_LOGO_PATH)
 
 top_l, top_r = st.columns([1, 5])
 with top_l:
-    if st.button("↻ Refresh participants", use_container_width=True):
+    if st.button("↻ Actualizar participantes", use_container_width=True):
         refresh_data()
         st.rerun()
 
@@ -78,7 +69,7 @@ with top_l:
 try:
     participants = load_participants(client, _cache_key())
 except EventtiaAPIError as exc:
-    st.error(f"Could not load participants from Eventtia: {exc}")
+    st.error(f"No se pudieron cargar los participantes desde Eventtia: {exc}")
     st.stop()
 
 buckets = utils.split_by_status(participants)
@@ -124,13 +115,13 @@ def render_card_close():
 def handle_approve(participant_id: str):
     try:
         client.approve_participant(participant_id)
-        st.toast("Participant approved successfully.", icon="✅")
+        st.toast("Participante aprobado con éxito.", icon="✅")
     except ConflictError as exc:
         st.warning(str(exc))
     except IntegrityError as exc:
         st.error(str(exc))
     except EventtiaAPIError as exc:
-        st.error(f"Could not update the participant in Eventtia. Please try again. ({exc})")
+        st.error(f"No se pudo actualizar el participante en Eventtia. Intentá nuevamente. ({exc})")
     finally:
         refresh_data()
 
@@ -138,13 +129,13 @@ def handle_approve(participant_id: str):
 def handle_reject(participant_id: str):
     try:
         client.reject_participant(participant_id)
-        st.toast("Participant rejected.", icon="🚫")
+        st.toast("Participante rechazado.", icon="🚫")
     except ConflictError as exc:
         st.warning(str(exc))
     except IntegrityError as exc:
         st.error(str(exc))
     except EventtiaAPIError as exc:
-        st.error(f"Could not update the participant in Eventtia. Please try again. ({exc})")
+        st.error(f"No se pudo actualizar el participante en Eventtia. Intentá nuevamente. ({exc})")
     finally:
         refresh_data()
         st.session_state.pop("confirm_reject_id", None)
@@ -154,62 +145,62 @@ def handle_reject(participant_id: str):
 # Tabs
 # ---------------------------------------------------------------------------
 tab_new, tab_approved, tab_rejected = st.tabs(
-    [f"New ({len(pending)})", f"Approved ({len(approved)})", f"Rejected ({len(rejected)})"]
+    [f"Nuevos ({len(pending)})", f"Aprobados ({len(approved)})", f"Rechazados ({len(rejected)})"]
 )
 
 # ---- New / Pending tab -----------------------------------------------------
 with tab_new:
-    query = st.text_input("Search new participants", placeholder="Search by name, email, company, position...", key="search_new")
+    query = st.text_input("Buscar participantes nuevos", placeholder="Buscar por nombre, email, empresa, cargo...", key="search_new")
     visible = utils.search_participants(pending, query)
 
     confirm_id = st.session_state.get("confirm_reject_id")
     if confirm_id and any(p.id == confirm_id for p in pending):
         target = next(p for p in pending if p.id == confirm_id)
-        st.warning(f"Are you sure you want to reject **{target.full_name}**? This will update Eventtia immediately.")
+        st.warning(f"¿Estás seguro de rechazar a **{target.full_name}**? Esto actualizará Eventtia de inmediato.")
         c1, c2 = st.columns([1, 1])
         with c1:
-            if st.button("Confirm rejection", type="primary", key="confirm_reject_btn"):
+            if st.button("Confirmar rechazo", type="primary", key="confirm_reject_btn"):
                 handle_reject(confirm_id)
                 st.rerun()
         with c2:
-            if st.button("Cancel", key="cancel_reject_btn"):
+            if st.button("Cancelar", key="cancel_reject_btn"):
                 st.session_state.pop("confirm_reject_id", None)
                 st.rerun()
 
     if not visible:
-        st.info("No pending participants right now." if not query else "No matches for that search.")
+        st.info("No hay participantes pendientes por el momento." if not query else "No se encontraron coincidencias.")
 
     for p in visible:
         render_card_open(p)
         col1, col2, col_spacer = st.columns([1, 1, 4])
         with col1:
-            if st.button("Approve", key=f"approve_{p.id}", type="primary", use_container_width=True):
+            if st.button("Aprobar", key=f"approve_{p.id}", type="primary", use_container_width=True):
                 handle_approve(p.id)
                 st.rerun()
         with col2:
-            if st.button("Reject", key=f"reject_{p.id}", use_container_width=True):
+            if st.button("Rechazar", key=f"reject_{p.id}", use_container_width=True):
                 st.session_state["confirm_reject_id"] = p.id
                 st.rerun()
         render_card_close()
 
 # ---- Approved tab (read-only) ----------------------------------------------
 with tab_approved:
-    query = st.text_input("Search approved participants", placeholder="Search by name, email, company, position...", key="search_approved")
+    query = st.text_input("Buscar participantes aprobados", placeholder="Buscar por nombre, email, empresa, cargo...", key="search_approved")
     visible = utils.search_participants(approved, query)
-    st.caption(f"{len(visible)} of {len(approved)} approved participants shown.")
+    st.caption(f"{len(visible)} de {len(approved)} participantes aprobados mostrados.")
     if not visible:
-        st.info("No approved participants yet." if not query else "No matches for that search.")
+        st.info("Todavía no hay participantes aprobados." if not query else "No se encontraron coincidencias.")
     for p in visible:
         render_card_open(p)
         render_card_close()
 
 # ---- Rejected tab (read-only) -----------------------------------------------
 with tab_rejected:
-    query = st.text_input("Search rejected participants", placeholder="Search by name, email, company, position...", key="search_rejected")
+    query = st.text_input("Buscar participantes rechazados", placeholder="Buscar por nombre, email, empresa, cargo...", key="search_rejected")
     visible = utils.search_participants(rejected, query)
-    st.caption(f"{len(visible)} of {len(rejected)} rejected participants shown.")
+    st.caption(f"{len(visible)} de {len(rejected)} participantes rechazados mostrados.")
     if not visible:
-        st.info("No rejected participants." if not query else "No matches for that search.")
+        st.info("No hay participantes rechazados." if not query else "No se encontraron coincidencias.")
     for p in visible:
         render_card_open(p)
         render_card_close()
