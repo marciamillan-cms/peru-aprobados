@@ -134,15 +134,24 @@ html, body, [class*="css"] {
     margin-right: 0.6rem;
     box-shadow: 0 0 10px rgba(25, 216, 130, 0.7);
 }
-.brand-logos {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-.brand-logo {
-    height: 32px;
-    max-width: 140px;
+
+/* ---- Corner logos -- fixed to the actual viewport corners, like a
+   watermark, rather than sitting inside the header pill ---- */
+.corner-logo {
+    position: fixed;
+    top: 18px;
+    z-index: 999;
+    height: 44px;
+    max-width: 130px;
     object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+.corner-logo-left { left: 22px; }
+.corner-logo-right { right: 22px; }
+@media (max-width: 640px) {
+    .corner-logo { height: 32px; max-width: 90px; }
+    .corner-logo-left { left: 10px; }
+    .corner-logo-right { right: 10px; }
 }
 
 /* ---- Participant card ---- */
@@ -277,25 +286,30 @@ def _img_to_base64(path: str) -> str | None:
 
 
 def render_brand_bar(st_module, title: str, company_logo_path: str = "", event_logo_path: str = ""):
-    """Renders the header bar, with the company/event logos on the right
-    if the corresponding image files exist -- silently skipped otherwise."""
+    """
+    Renders the header pill (title only) plus the company/event logos
+    fixed to the top-left/top-right corners of the viewport -- like a
+    watermark -- rather than inside the pill itself. Either logo is
+    silently skipped if its file doesn't exist.
+    """
     company_logo = _img_to_base64(company_logo_path)
     event_logo = _img_to_base64(event_logo_path)
 
-    logos_html = ""
-    if company_logo or event_logo:
-        parts = []
-        if company_logo:
-            parts.append(f'<img src="{company_logo}" class="brand-logo" alt="Logo empresa" />')
-        if event_logo:
-            parts.append(f'<img src="{event_logo}" class="brand-logo" alt="Logo evento" />')
-        logos_html = f'<div class="brand-logos">{"".join(parts)}</div>'
+    if event_logo:
+        st_module.markdown(
+            f'<img src="{event_logo}" class="corner-logo corner-logo-left" alt="Logo evento" />',
+            unsafe_allow_html=True,
+        )
+    if company_logo:
+        st_module.markdown(
+            f'<img src="{company_logo}" class="corner-logo corner-logo-right" alt="Logo empresa" />',
+            unsafe_allow_html=True,
+        )
 
     st_module.markdown(
         f"""
         <div class="brand-bar">
             <h1><span class="brand-mark"></span>{title}</h1>
-            {logos_html}
         </div>
         """,
         unsafe_allow_html=True,
