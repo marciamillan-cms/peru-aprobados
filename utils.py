@@ -19,9 +19,9 @@ import config
 from eventtia_client import Participant
 
 STATUS_LABELS = {
-    config.STATUS_PENDING: "New",
-    config.STATUS_APPROVED: "Approved",
-    config.STATUS_REJECTED: "Rejected",
+    config.STATUS_PENDING: "Nuevos",
+    config.STATUS_APPROVED: "Aprobados",
+    config.STATUS_REJECTED: "Rechazados",
 }
 
 STATUS_BADGE_CLASS = {
@@ -57,47 +57,49 @@ def search_participants(participants: list[Participant], query: str) -> list[Par
 
 def field_label(field_name: str) -> str:
     return {
-        "first_name": "First name",
-        "last_name": "Last name",
-        "email": "Email",
-        "company": "Company",
-        "job_title": "Position",
-        "telephone": "Phone",
+        "first_name": "Nombre",
+        "last_name": "Apellido",
+        "email": "Correo electrónico",
+        "company": "Empresa",
+        "job_title": "Cargo",
+        "telephone": "Teléfono",
     }.get(field_name, field_name.replace("_", " ").title())
 
 
 THEME_CSS = """
 <style>
 :root {
-    --bg: #0B0B14;
-    --surface: #14141F;
-    --surface-alt: #1B1B29;
-    --border: #2A2A3C;
-    --text: #F4F4FA;
-    --text-muted: #9A9AB3;
-    --accent-1: #7C5CFF;
-    --accent-2: #3EC6FF;
+    /* Colors sampled directly from perufintechforum.com: deep navy
+    background, vibrant emerald-green accent, white text. */
+    --bg: #0E1B30;
+    --surface: #16253F;
+    --surface-alt: #1D2E4C;
+    --border: #2C4066;
+    --text: #FFFFFF;
+    --text-muted: #A9B7D0;
+    --accent-1: #19D882;
+    --accent-2: #12B87A;
     --accent-gradient: linear-gradient(90deg, var(--accent-1), var(--accent-2));
-    --success: #22C55E;
-    --success-bg: rgba(34, 197, 94, 0.12);
+    --success: #19D882;
+    --success-bg: rgba(25, 216, 130, 0.14);
     --danger: #F5484B;
-    --danger-bg: rgba(245, 72, 75, 0.12);
+    --danger-bg: rgba(245, 72, 75, 0.14);
     --warning: #F5A623;
-    --warning-bg: rgba(245, 166, 35, 0.12);
-    --radius: 16px;
-    --radius-sm: 10px;
+    --warning-bg: rgba(245, 166, 35, 0.14);
+    --radius: 18px;
+    --radius-sm: 999px;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 
 html, body, [class*="css"] {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .stApp {
-    background: radial-gradient(circle at 15% 0%, rgba(124, 92, 255, 0.12), transparent 40%),
-                radial-gradient(circle at 85% 10%, rgba(62, 198, 255, 0.10), transparent 45%),
+    background: radial-gradient(circle at 10% 0%, rgba(25, 216, 130, 0.16), transparent 40%),
+                radial-gradient(circle at 90% 15%, rgba(18, 184, 122, 0.12), transparent 45%),
                 var(--bg);
     color: var(--text);
 }
@@ -110,15 +112,16 @@ html, body, [class*="css"] {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.1rem 1.5rem;
+    padding: 1rem 1.8rem;
     margin-bottom: 1.5rem;
-    background: var(--surface);
+    background: rgba(29, 46, 76, 0.75);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 999px;
     box-shadow: var(--shadow);
+    backdrop-filter: blur(6px);
 }
 .brand-bar h1 {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 700;
     margin: 0;
     letter-spacing: 0.01em;
@@ -126,9 +129,20 @@ html, body, [class*="css"] {
 .brand-bar .brand-mark {
     display: inline-block;
     width: 10px; height: 10px;
-    border-radius: 3px;
+    border-radius: 50%;
     background: var(--accent-gradient);
     margin-right: 0.6rem;
+    box-shadow: 0 0 10px rgba(25, 216, 130, 0.7);
+}
+.brand-logos {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.brand-logo {
+    height: 32px;
+    max-width: 140px;
+    object-fit: contain;
 }
 
 /* ---- Participant card ---- */
@@ -180,26 +194,27 @@ html, body, [class*="css"] {
 }
 .stTabs [aria-selected="true"] {
     color: var(--text) !important;
-    border-bottom: 2px solid transparent;
-    border-image: var(--accent-gradient);
-    border-image-slice: 1;
+    border-bottom: 2px solid var(--accent-1);
 }
 
-/* ---- Buttons ---- */
+/* ---- Buttons -- fully rounded pills, matching the site's CTAs ---- */
 .stButton > button {
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
     border: 1px solid var(--border);
     font-weight: 600;
+    padding: 0.5rem 1.3rem;
 }
 .stButton > button[kind="primary"] {
     background: var(--accent-gradient);
     border: none;
     color: #fff;
+    font-weight: 700;
 }
 div[data-testid="stForm"] .stButton > button {
     background: var(--accent-gradient);
     border: none;
     color: #fff;
+    font-weight: 700;
 }
 
 /* ---- Inputs ---- */
@@ -207,7 +222,7 @@ div[data-testid="stForm"] .stButton > button {
     background: var(--surface-alt) !important;
     border-color: var(--border) !important;
     color: var(--text) !important;
-    border-radius: var(--radius-sm) !important;
+    border-radius: 999px !important;
 }
 
 /* ---- Metric-style count chips ---- */
@@ -229,3 +244,45 @@ hr { border-color: var(--border) !important; }
 
 def inject_theme(st_module):
     st_module.markdown(THEME_CSS, unsafe_allow_html=True)
+
+
+def _img_to_base64(path: str) -> str | None:
+    """Reads a local image file and returns a base64 data-URI, or None if
+    the file doesn't exist -- so a missing logo never crashes the app."""
+    import base64
+    import mimetypes
+    import os
+
+    if not path or not os.path.exists(path):
+        return None
+    mime, _ = mimetypes.guess_type(path)
+    mime = mime or "image/png"
+    with open(path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:{mime};base64,{encoded}"
+
+
+def render_brand_bar(st_module, title: str, company_logo_path: str = "", event_logo_path: str = ""):
+    """Renders the header bar, with the company/event logos on the right
+    if the corresponding image files exist -- silently skipped otherwise."""
+    company_logo = _img_to_base64(company_logo_path)
+    event_logo = _img_to_base64(event_logo_path)
+
+    logos_html = ""
+    if company_logo or event_logo:
+        parts = []
+        if company_logo:
+            parts.append(f'<img src="{company_logo}" class="brand-logo" alt="Logo empresa" />')
+        if event_logo:
+            parts.append(f'<img src="{event_logo}" class="brand-logo" alt="Logo evento" />')
+        logos_html = f'<div class="brand-logos">{"".join(parts)}</div>'
+
+    st_module.markdown(
+        f"""
+        <div class="brand-bar">
+            <h1><span class="brand-mark"></span>{title}</h1>
+            {logos_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
