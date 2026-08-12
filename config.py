@@ -92,6 +92,17 @@ DISPLAY_FIELDS = [
 SEARCHABLE_FIELDS = ["first_name", "last_name", "email", "company", "job_title"]
 
 # ---------------------------------------------------------------------------
+# Ticket / attendee-type filter
+# ---------------------------------------------------------------------------
+# Only participants whose ticket (Eventtia "attendee type") matches this
+# name are shown at all -- everyone else (other ticket types that don't
+# need approval) is filtered out before it ever reaches the New/Approved/
+# Rejected tabs. Matching is accent- and case-insensitive, so "Invitados
+# Cámara", "invitados camara", "INVITADOS CÁMARA" all match.
+# Set to "" (empty string) to disable filtering and show every ticket type.
+TICKET_TYPE_FILTER = _get("EVENTTIA_TICKET_TYPE_FILTER", "Invitados Cámara")
+
+# ---------------------------------------------------------------------------
 # Branding
 # ---------------------------------------------------------------------------
 # Local image files committed to the repo (e.g. under assets/). If a file
