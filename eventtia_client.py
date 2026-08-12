@@ -77,6 +77,8 @@ class Participant:
     id: str
     uuid: str
     status: str
+    attendee_type_id: str = ""
+    attendee_type_name: str = ""
     fields: dict = field(default_factory=dict)     # readable name -> value
     raw_fields: dict = field(default_factory=dict)  # field_id -> value (as returned by Eventtia)
     updated_at: Optional[str] = None
@@ -114,6 +116,7 @@ class EventtiaClient:
         self._v3_token: Optional[str] = None
         self._v4_token: Optional[str] = None
         self._field_defs: Optional[dict] = None  # field_id -> {"name":..., "alias":...}
+        self._attendee_type_names: Optional[dict] = None  # attendee_type_id -> name
 
     # ------------------------------------------------------------------
     # Auth -- v3 and v4 are separate logins, separate tokens
@@ -251,12 +254,30 @@ class EventtiaClient:
                 "alias": attrs.get("alias"),
             }
         self._field_defs = defs
+
+        # Same response also lists the attendee TYPES themselves (the
+        # "tickets": General, VIP, Invitados Cámara, ...) -- cache their
+        # names too, keyed by id, so participants can be filtered/labeled
+        # by ticket type without a second request.
+        type_names: dict = {}
+        for item in (data or {}).get("data", []) or []:
+            if item.get("type") != "attendee_types":
+                continue
+            type_names[str(item["id"])] = item.get("attributes", {}).get("name", "")
+        self._attendee_type_names = type_names
+
         return defs
+
+    def get_attendee_type_names(self) -> dict:
+        """{attendee_type_id: name} for every ticket/attendee type on this event."""
+        if self._attendee_type_names is None:
+            self.get_field_definitions()
+        return self._attendee_type_names or {}
 
     # ------------------------------------------------------------------
     # Participants (reads, v3)
     # ------------------------------------------------------------------
-    def _normalize(self, attendee: dict, field_defs: dict) -> Participant:
+    def _normalize(self, attendee: dict, field_defs: dict, type_names: dict) -> Participant:
         attrs = attendee.get("attributes", {})
         raw_fields = attrs.get("fields", {}) or {}
 
@@ -268,17 +289,38 @@ class EventtiaClient:
 
         status = (attrs.get("status") or config.DEFAULT_STATUS).strip().lower()
 
+        attendee_type_id = str(
+            (attendee.get("relationships", {}) or {}).get("attendee_type", {}).get("data", {}).get("id", "")
+        )
+        attendee_type_name = type_names.get(attendee_type_id, "")
+
         return Participant(
             id=str(attendee.get("id")),
             uuid=attrs.get("uuid", ""),
             status=status,
+            attendee_type_id=attendee_type_id,
+            attendee_type_name=attendee_type_name,
             fields=readable,
             raw_fields=raw_fields,
             updated_at=attrs.get("updated_at"),
         )
 
+    @staticmethod
+    def _normalize_ticket_name(name: str) -> str:
+        """Case/accent-insensitive comparison key, so 'Invitados Cámara',
+        'invitados camara', 'INVITADOS CÁMARA' etc all match the same
+        configured filter value."""
+        import unicodedata
+
+        if not name:
+            return ""
+        decomposed = unicodedata.normalize("NFKD", name)
+        without_accents = "".join(c for c in decomposed if not unicodedata.combining(c))
+        return without_accents.strip().lower()
+
     def get_participants(self) -> list[Participant]:
         field_defs = self.get_field_definitions()
+        type_names = self.get_attendee_type_names()
         participants: list[Participant] = []
         page_number = 1
         total_pages = 1
@@ -290,20 +332,25 @@ class EventtiaClient:
                 params={"page[size]": config.PAGE_SIZE, "page[number]": page_number},
             )
             for attendee in (data or {}).get("data", []) or []:
-                participants.append(self._normalize(attendee, field_defs))
+                participants.append(self._normalize(attendee, field_defs, type_names))
 
             total_pages = (data or {}).get("meta", {}).get("total_pages", 1) or 1
             page_number += 1
+
+        if config.TICKET_TYPE_FILTER:
+            target = self._normalize_ticket_name(config.TICKET_TYPE_FILTER)
+            participants = [p for p in participants if self._normalize_ticket_name(p.attendee_type_name) == target]
 
         return participants
 
     def get_participant(self, participant_id: str) -> Participant:
         field_defs = self.get_field_definitions()
+        type_names = self.get_attendee_type_names()
         data = self._v3_request("GET", f"/events/{self.event_uri}/attendees/{participant_id}")
         attendee = (data or {}).get("data")
         if not attendee:
             raise EventtiaAPIError(f"Participant {participant_id} was not found in Eventtia.")
-        return self._normalize(attendee, field_defs)
+        return self._normalize(attendee, field_defs, type_names)
 
     # ------------------------------------------------------------------
     # Approve / Reject (writes, v4)
