@@ -91,6 +91,15 @@ DISPLAY_FIELDS = [
 
 SEARCHABLE_FIELDS = ["first_name", "last_name", "email", "company", "job_title"]
 
+# ---------------------------------------------------------------------------
+# Branding
+# ---------------------------------------------------------------------------
+# Local image files committed to the repo (e.g. under assets/). If a file
+# doesn't exist, that logo is simply skipped -- the app never crashes over
+# a missing logo.
+COMPANY_LOGO_PATH = _get("COMPANY_LOGO_PATH", "assets/company_logo.png")
+EVENT_LOGO_PATH = _get("EVENT_LOGO_PATH", "assets/event_logo.png")
+
 
 def is_configured() -> bool:
     """True once the minimum settings needed to talk to Eventtia are present."""
