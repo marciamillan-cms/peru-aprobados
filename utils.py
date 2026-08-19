@@ -240,6 +240,21 @@ div[data-testid="stForm"] .stButton > button {
     font-weight: 700;
 }
 
+/* ---- Download button -- same pill styling, own CSS class in Streamlit ---- */
+.stDownloadButton > button {
+    border-radius: 999px;
+    border: 1px solid var(--accent-1);
+    background: var(--surface-alt);
+    color: var(--accent-1);
+    font-weight: 700;
+    padding: 0.5rem 1.3rem;
+}
+.stDownloadButton > button:hover {
+    background: var(--accent-gradient);
+    color: #fff;
+    border-color: transparent;
+}
+
 /* ---- Inputs ---- */
 .stTextInput input, .stTextInput > div > div {
     background: var(--surface-alt) !important;
@@ -267,6 +282,58 @@ hr { border-color: var(--border) !important; }
 
 def inject_theme(st_module):
     st_module.markdown(THEME_CSS, unsafe_allow_html=True)
+
+
+def build_participants_excel(participants: list) -> bytes:
+    """
+    Builds a formatted .xlsx workbook (in memory, returned as bytes) with
+    one row per participant, columns matching what's shown on their card.
+    No formulas involved -- this is a plain data export.
+    """
+    from io import BytesIO
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Aprobados"
+
+    columns = list(config.DISPLAY_FIELDS)
+    headers = [field_label(f) for f in columns]
+
+    header_fill = PatternFill(start_color="19D882", end_color="19D882", fill_type="solid")
+    header_font = Font(name="Arial", bold=True, color="0E1B30")
+    body_font = Font(name="Arial")
+
+    for col_idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(vertical="center")
+
+    for row_idx, p in enumerate(participants, start=2):
+        for col_idx, field_name in enumerate(columns, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=p.get(field_name, ""))
+            cell.font = body_font
+
+    # Reasonable column widths based on content, capped so nothing gets
+    # absurdly wide from one long value.
+    for col_idx, header in enumerate(headers, start=1):
+        col_letter = get_column_letter(col_idx)
+        max_len = len(header)
+        for row_idx in range(2, len(participants) + 2):
+            value = ws.cell(row=row_idx, column=col_idx).value
+            if value:
+                max_len = max(max_len, len(str(value)))
+        ws.column_dimensions[col_letter].width = min(max_len + 3, 40)
+
+    ws.freeze_panes = "A2"
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
 
 
 def _img_to_base64(path: str) -> str | None:
