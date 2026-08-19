@@ -10,6 +10,7 @@ viewer allow-list (Share -> "Who can view this app" -> restrict by email),
 not by any code here -- see README.md for setup.
 """
 import streamlit as st
+from datetime import datetime
 
 import config
 import utils
@@ -256,6 +257,17 @@ with tab_submitted:
 with tab_approved:
     query = st.text_input("Buscar participantes aprobados", placeholder="Buscar por nombre, email, empresa, cargo...", key="search_approved")
     visible = utils.search_participants(approved, query)
+
+    if visible:
+        excel_bytes = utils.build_participants_excel(visible)
+        st.download_button(
+            label="⬇ Descargar aprobados",
+            data=excel_bytes,
+            file_name=f"participantes_aprobados_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=False,
+        )
+
     st.caption(f"{len(visible)} de {len(approved)} participantes aprobados mostrados.")
     if not visible:
         st.info("Todavía no hay participantes aprobados." if not query else "No se encontraron coincidencias.")
